@@ -12,6 +12,8 @@ using Microsoft.EntityFrameworkCore;
 using Alejo.Data.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Alejo.Data.Repository;
+using System.Security.Claims;
 
 namespace Alejo.Web
 {
@@ -58,7 +60,19 @@ namespace Alejo.Web
                .AddEntityFrameworkStores<AppDbContext>()
                .AddDefaultTokenProviders();
 
-               services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+               services.AddTransient<IUserRepository, UserRepository>();
+
+               services.AddDistributedMemoryCache();
+
+               services.AddSession(options => {
+                    options.IdleTimeout = TimeSpan.FromMinutes(1);
+                    options.IOTimeout = TimeSpan.FromMinutes(1);
+                    options.Cookie.HttpOnly = true;
+               });
+
+               services.AddMvc()
+                   .SetCompatibilityVersion(CompatibilityVersion.Version_2_1)
+                   .AddSessionStateTempDataProvider();
           }
 
           // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -80,8 +94,7 @@ namespace Alejo.Web
 
                app.UseHttpsRedirection();
                app.UseStaticFiles();
-               app.UseCookiePolicy();
-
+               app.UseSession();
                app.UseAuthentication();
 
                app.UseMvc(routes =>
@@ -95,6 +108,7 @@ namespace Alejo.Web
                      name: "default",
                      template: "{controller=Home}/{action=Index}/{id?}");
                });
+               app.UseCookiePolicy();
           }
      }
 }
